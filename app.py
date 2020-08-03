@@ -17,6 +17,7 @@ import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
+from sqlalchemy import extract
 from flask import Flask, jsonify
 
 engine = create_engine("sqlite:///hawaii.sqlite")
@@ -37,6 +38,8 @@ def welcome():
     /api/v1.0/stations
     /api/v1.0/tobs
     /api/v1.0/temp/start/end
+    /api/v1.0/june-statistics
+    /api/v1.0/december-statistics
     ''')
 
 @app.route("/api/v1.0/precipitation")
@@ -81,3 +84,31 @@ def stats(start=None, end=None):
             filter(Measurement.date <= end).all()
     temps = list(np.ravel(results))
     return jsonify(temps=temps)
+
+@app.route("/api/v1.0/june-statistics")
+def june_statistics():
+    results = session.query(Measurement.date, Measurement.prcp, Measurement.tobs).\
+        filter(extract('month', Measurement.date)==6).all()
+    
+    df = pd.DataFrame(results, columns=['date', 'precipitation', 'temperature'])
+    df.set_index(df['date'], inplace=True)
+    df = df.sort_index()
+    
+    june_stats = df.describe()
+    june_stats_dict = june_stats.to_dict()
+
+    return jsonify (june_stats_dict)
+
+@app.route("/api/v1.0/december-statistics")
+def dec_statistics():
+    results = session.query(Measurement.date, Measurement.prcp, Measurement.tobs).\
+        filter(extract('month', Measurement.date)==12).all()
+    
+    df = pd.DataFrame(results, columns=['date', 'precipitation', 'temperature'])
+    df.set_index(df['date'], inplace=True)
+    df = df.sort_index()
+    
+    dec_stats = df.describe()
+    dec_stats_dict = dec_stats.to_dict()
+
+    return jsonify (dec_stats_dict)
